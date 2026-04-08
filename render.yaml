@@ -35,6 +35,10 @@ services:
         sync: false # set manually to the deployed client URL
       - key: ADMIN_SECRET
         generateValue: true
+      - key: RESEND_API_KEY
+        sync: false # add manually after creating an API key at resend.com
+      - key: EMAIL_FROM
+        value: Gather <hello@gather.app>
 
   - type: web
     name: gather-client

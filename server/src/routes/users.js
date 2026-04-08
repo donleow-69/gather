@@ -2,6 +2,8 @@ import crypto from 'node:crypto';
 import { Router } from 'express';
 import { query } from '../db.js';
 import { requireUser } from '../middleware/auth.js';
+import { sendEmail } from '../emails/client.js';
+import { welcomeEmail } from '../emails/templates.js';
 
 export const usersRouter = Router();
 
@@ -42,6 +44,11 @@ usersRouter.post('/signup', async (req, res) => {
             [normalizedEmail, name.trim(), city.trim(), life_stage, token]
         );
         const user = rows[0];
+
+        // Fire-and-forget welcome email — must not block or fail signup
+        const { subject, html, text } = welcomeEmail({ name: user.name });
+        sendEmail({ to: user.email, subject, html, text }).catch(() => {});
+
         res.status(201).json({ token: user.session_token, user });
     } catch (err) {
         console.error('signup failed', err);

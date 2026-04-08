@@ -1,5 +1,7 @@
 import { Router } from 'express';
 import { pool } from '../db.js';
+import { sendEmail } from '../emails/client.js';
+import { cohortReadyEmail } from '../emails/templates.js';
 
 export const adminRouter = Router();
 
@@ -28,7 +30,7 @@ adminRouter.post('/admin/match', requireAdmin, async (req, res) => {
         await client.query('BEGIN');
 
         const { rows: unmatched } = await client.query(
-            `SELECT u.id, u.name, u.city, u.life_stage
+            `SELECT u.id, u.name, u.email, u.city, u.life_stage
                FROM users u
               WHERE NOT EXISTS (
                   SELECT 1 FROM cohort_members cm WHERE cm.user_id = u.id
@@ -87,8 +89,10 @@ adminRouter.post('/admin/match', requireAdmin, async (req, res) => {
                     city,
                     life_stage: lifeStage,
                     member_ids: chunk.map(u => u.id),
+                    members: chunk.map(u => ({ id: u.id, name: u.name, email: u.email })),
                     session_id: sessionRows[0].id,
                     scheduled_at: sessionRows[0].scheduled_at,
+                    video_link: DEFAULT_VIDEO_LINK,
                 });
 
                 cohortIndex++;
@@ -101,11 +105,37 @@ adminRouter.post('/admin/match', requireAdmin, async (req, res) => {
 
         await client.query('COMMIT');
 
+        // Fire-and-forget cohort-ready emails. Failures are logged inside
+        // sendEmail and must not affect the API response.
+        for (const cohort of cohortsCreated) {
+            const memberFirstNames = cohort.members.map(m => m.name);
+            for (const member of cohort.members) {
+                const { subject, html, text } = cohortReadyEmail({
+                    name: member.name,
+                    cohortName: cohort.name,
+                    city: cohort.city,
+                    members: memberFirstNames,
+                    scheduledAt: cohort.scheduled_at,
+                    videoLink: cohort.video_link,
+                });
+                sendEmail({ to: member.email, subject, html, text }).catch(() => {});
+            }
+        }
+
         res.json({
             cohorts_created: cohortsCreated.length,
             users_matched: matchedIds.size,
             users_still_unmatched: stillUnmatched.length,
-            cohorts: cohortsCreated,
+            cohorts: cohortsCreated.map(c => ({
+                cohort_id: c.cohort_id,
+                name: c.name,
+                city: c.city,
+                life_stage: c.life_stage,
+                member_ids: c.member_ids,
+                member_names: c.members.map(m => m.name),
+                session_id: c.session_id,
+                scheduled_at: c.scheduled_at,
+            })),
             unmatched: stillUnmatched.map(u => ({
                 id: u.id,
                 name: u.name,
