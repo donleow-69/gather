@@ -1,0 +1,24 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer components {
+    .btn {
+        @apply inline-flex items-center justify-center rounded-full px-6 py-3 font-medium transition;
+    }
+    .btn-primary {
+        @apply btn bg-gather-accent text-white hover:opacity-90;
+    }
+    .btn-secondary {
+        @apply btn border border-gather-ink/20 text-gather-ink hover:bg-gather-ink/5;
+    }
+    .card {
+        @apply rounded-2xl bg-white p-6 shadow-sm;
+    }
+    .input {
+        @apply w-full rounded-lg border border-gather-ink/20 px-4 py-3 focus:border-gather-accent focus:outline-none;
+    }
+    .label {
+        @apply mb-1 block text-sm font-medium text-gather-ink/80;
+    }
+}
