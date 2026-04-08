@@ -2,23 +2,81 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer base {
+    html {
+        text-rendering: optimizeLegibility;
+        -webkit-font-smoothing: antialiased;
+    }
+
+    body {
+        /* Subtle warm radial gradient + faint paper-noise overlay.
+           The SVG noise is inlined as a data URL so there are no extra requests. */
+        background-color: #FAF6EF;
+        background-image:
+            radial-gradient(ellipse 80% 60% at 50% 0%, rgba(226, 109, 92, 0.08), transparent 60%),
+            radial-gradient(ellipse 60% 50% at 100% 100%, rgba(201, 168, 124, 0.10), transparent 60%),
+            url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' seed='3'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.045'/%3E%3C/svg%3E");
+        background-attachment: fixed;
+        min-height: 100vh;
+    }
+}
+
 @layer components {
+    /* === Buttons === */
     .btn {
-        @apply inline-flex items-center justify-center rounded-full px-6 py-3 font-medium transition;
+        @apply inline-flex items-center justify-center rounded-full font-medium transition-all duration-200;
     }
     .btn-primary {
-        @apply btn bg-gather-accent text-white hover:opacity-90;
+        @apply btn bg-gather-accent text-white px-8 py-4 text-base shadow-warm
+               hover:bg-gather-accent-deep hover:shadow-warm-lg hover:-translate-y-0.5
+               active:translate-y-0;
     }
     .btn-secondary {
-        @apply btn border border-gather-ink/20 text-gather-ink hover:bg-gather-ink/5;
+        @apply btn bg-white/70 backdrop-blur border border-gather-ink/10 text-gather-ink px-6 py-3
+               hover:bg-white hover:border-gather-ink/20 hover:shadow-warm;
     }
+    .btn-tactile {
+        @apply btn bg-white text-gather-ink px-8 py-6 text-lg font-medium shadow-warm
+               border border-gather-ink/10
+               hover:shadow-warm-lg hover:-translate-y-1 hover:border-gather-accent/40
+               active:translate-y-0 active:shadow-warm;
+    }
+
+    /* === Cards === */
     .card {
-        @apply rounded-2xl bg-white p-6 shadow-sm;
+        @apply rounded-3xl bg-white/85 backdrop-blur-sm p-8 shadow-warm border border-white;
     }
+    .card-lg {
+        @apply rounded-3xl bg-white/85 backdrop-blur-sm p-10 shadow-warm-lg border border-white;
+    }
+
+    /* === Forms === */
     .input {
-        @apply w-full rounded-lg border border-gather-ink/20 px-4 py-3 focus:border-gather-accent focus:outline-none;
+        @apply w-full rounded-2xl bg-white/80 border border-gather-ink/10 px-5 py-4 text-lg
+               text-gather-ink placeholder:text-gather-ink/30
+               focus:bg-white focus:border-gather-accent focus:ring-4 focus:ring-gather-accent/15
+               focus:outline-none transition-all duration-200;
     }
     .label {
-        @apply mb-1 block text-sm font-medium text-gather-ink/80;
+        @apply mb-2 block text-sm font-medium text-gather-ink-soft tracking-wide;
+    }
+
+    /* === Headlines === */
+    .display {
+        @apply font-display font-normal text-gather-ink leading-[1.05] tracking-tight;
+    }
+
+    /* === Avatar circles for cohort members === */
+    .avatar {
+        @apply flex h-16 w-16 items-center justify-center rounded-full
+               font-display text-xl font-semibold text-gather-ink shadow-warm;
+    }
+
+    /* === Progress dots === */
+    .dot {
+        @apply h-2 w-2 rounded-full bg-gather-ink/15 transition-all duration-300;
+    }
+    .dot-filled {
+        @apply bg-gather-accent w-8;
     }
 }

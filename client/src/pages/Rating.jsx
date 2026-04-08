@@ -3,9 +3,9 @@ import { Link, useLocation } from 'react-router-dom';
 import { api } from '../api.js';
 
 const OPTIONS = [
-    { value: 'yes', label: 'Yes' },
-    { value: 'maybe', label: 'Maybe' },
-    { value: 'no', label: 'No' },
+    { value: 'yes',   label: 'Yes',   sub: "I'd see them again" },
+    { value: 'maybe', label: 'Maybe', sub: 'It was nice, not sure' },
+    { value: 'no',    label: 'No',    sub: 'Not quite my people' },
 ];
 
 export default function Rating() {
@@ -15,7 +15,6 @@ export default function Rating() {
     const [error, setError] = useState('');
     const [busy, setBusy] = useState(false);
 
-    // If we got here directly (no router state), look up the user's session.
     useEffect(() => {
         if (sessionId) return;
         api.myCohort()
@@ -39,38 +38,59 @@ export default function Rating() {
 
     if (submitted) {
         return (
-            <Centered>
-                <h1 className="text-2xl font-bold">Thanks for the feedback.</h1>
-                <p className="mt-3 text-gather-ink/70">It helps us match better next time.</p>
-                <Link to="/cohort" className="btn-secondary mt-6">Back to my circle</Link>
-            </Centered>
+            <main className="mx-auto flex min-h-screen max-w-xl flex-col items-center justify-center px-6 text-center">
+                <div className="card-lg w-full">
+                    <h1 className="display text-4xl">
+                        Thank you<span className="italic text-gather-accent">.</span>
+                    </h1>
+                    <p className="mt-4 text-gather-ink-soft">
+                        Your honesty is what makes the next circle better.
+                        We're glad you came.
+                    </p>
+                    <Link to="/cohort" className="btn-secondary mt-8">
+                        Back to my circle
+                    </Link>
+                </div>
+            </main>
         );
     }
 
     return (
-        <main className="mx-auto max-w-xl px-6 py-16 text-center">
-            <h1 className="text-3xl font-bold">Would you meet this group again?</h1>
-            <div className="mt-10 flex justify-center gap-4">
+        <main className="mx-auto max-w-2xl px-6 py-20 text-center">
+            <p className="text-sm uppercase tracking-[0.3em] text-gather-ink-soft">
+                A quiet question
+            </p>
+            <h1 className="display mt-4 text-4xl sm:text-5xl">
+                Would you meet
+                <br />
+                <span className="italic text-gather-accent">this group again?</span>
+            </h1>
+            <p className="mx-auto mt-6 max-w-md text-gather-ink-soft">
+                There's no wrong answer. We won't share your reply with the others —
+                it just helps us match better next time.
+            </p>
+
+            <div className="mt-12 grid gap-4 sm:grid-cols-3">
                 {OPTIONS.map((opt) => (
                     <button
                         key={opt.value}
                         onClick={() => submit(opt.value)}
                         disabled={busy || !sessionId}
-                        className="btn-secondary min-w-[100px] disabled:opacity-50"
+                        className="btn-tactile flex-col disabled:opacity-50"
                     >
-                        {opt.label}
+                        <span className="font-display text-2xl">{opt.label}</span>
+                        <span className="mt-1 text-sm font-normal text-gather-ink-soft">
+                            {opt.sub}
+                        </span>
                     </button>
                 ))}
             </div>
-            {error && <p className="mt-6 text-sm text-red-600">{error}</p>}
-        </main>
-    );
-}
 
-function Centered({ children }) {
-    return (
-        <main className="mx-auto flex min-h-screen max-w-xl flex-col items-center justify-center px-6 text-center">
-            {children}
+            {error && (
+                <p className="mx-auto mt-8 max-w-sm rounded-2xl bg-red-50 px-4 py-3 text-sm text-red-700">
+                    {error}
+                </p>
+            )}
         </main>
     );
 }

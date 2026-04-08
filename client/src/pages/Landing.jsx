@@ -2,19 +2,37 @@ import { Link } from 'react-router-dom';
 
 export default function Landing() {
     return (
-        <main className="mx-auto flex min-h-screen max-w-2xl flex-col items-center justify-center px-6 text-center">
-            <h1 className="text-5xl font-bold tracking-tight sm:text-6xl">Gather</h1>
-            <p className="mt-6 text-xl text-gather-ink/70">
-                Real friendships, started in small groups. Gather matches adults in your city
-                with others at a similar life stage, then brings you together over a single
-                video meetup. No swiping, no ghosting — just a quiet way to find your people.
+        <main className="mx-auto flex min-h-screen max-w-3xl flex-col items-center justify-center px-6 py-16 text-center">
+            {/* Wordmark */}
+            <p className="mb-10 text-sm uppercase tracking-[0.4em] text-gather-ink-soft">
+                Gather
             </p>
-            <Link to="/join" className="btn-primary mt-10 text-lg">
+
+            {/* Editorial headline */}
+            <h1 className="display text-6xl sm:text-7xl md:text-8xl">
+                Making friends
+                <br />
+                <span className="italic text-gather-accent">as an adult</span>
+                <br />
+                shouldn't be this hard.
+            </h1>
+
+            <p className="mx-auto mt-10 max-w-xl text-lg leading-relaxed text-gather-ink-soft sm:text-xl">
+                Gather quietly matches you with a small circle of people in your city
+                at a similar life stage. One video meetup. No pressure to be anything
+                other than yourself.
+            </p>
+
+            <Link to="/join" className="btn-primary mt-12 text-lg">
                 Join Gather
             </Link>
-            <p className="mt-6 text-sm text-gather-ink/50">
-                Free during early access · Takes under a minute
-            </p>
+
+            {/* Social proof / reassurance */}
+            <div className="mt-12 space-y-2 text-sm text-gather-ink-soft">
+                <p>No algorithm. No swiping. Just people.</p>
+                <p>Free during early access — no card, no catch.</p>
+                <p>Built quietly, by someone who's been there.</p>
+            </div>
         </main>
     );
 }
