@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import ReturningUser from '../components/ReturningUser.jsx';
 
 export default function Waiting() {
     return (
@@ -40,6 +41,8 @@ export default function Waiting() {
                 <Link to="/cohort" className="btn-secondary mt-10">
                     Check on my circle
                 </Link>
+
+                <ReturningUser />
             </div>
         </main>
     );

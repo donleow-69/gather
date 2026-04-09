@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import ReturningUser from '../components/ReturningUser.jsx';
 
 export default function Landing() {
     return (
@@ -26,6 +27,8 @@ export default function Landing() {
             <Link to="/join" className="btn-primary mt-10">
                 Join Gather
             </Link>
+
+            <ReturningUser />
 
             {/* Social proof / reassurance */}
             <div className="mt-10 space-y-1.5 text-xs text-gather-ink-soft">

@@ -27,6 +27,7 @@ async function request(path, { method = 'GET', body, auth = false } = {}) {
 
 export const api = {
     signup: (payload) => request('/api/signup', { method: 'POST', body: payload }),
+    login: (email) => request('/api/login', { method: 'POST', body: { email } }),
     me: () => request('/api/me', { auth: true }),
     myCohort: () => request('/api/me/cohort', { auth: true }),
     rate: (session_id, response) =>
