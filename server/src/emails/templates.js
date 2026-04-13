@@ -160,3 +160,38 @@ export function cohortReadyEmail({ name, cohortName, city, members, scheduledAt,
         text: `Your circle is ready, ${name}.\n\nWe've matched you with ${others.length === 1 ? 'one person' : `${others.length} people`} in ${city} we think you'll get along with.\n\nWhen: ${weekday}, ${dateStr} at ${timeStr}\nJoin: ${videoLink}\n\nWho you'll meet: ${others.join(', ') || '— just you for now —'}\nCircle: ${cohortName}\n\nOne hour. Just a video call. Bring whatever you'd bring to coffee with a friend you haven't met yet.\n\n— Gather`,
     };
 }
+
+// === Rating email — sent after a session, asks "Would you meet this group again?" ===
+export function ratingEmail({ name, ratingUrl }) {
+    const safeName = escapeHtml(name);
+    const safeUrl = escapeHtml(ratingUrl);
+
+    const html = shell({
+        preheader: 'How was your meetup?',
+        bodyHtml: `
+            <h1 style="margin:0 0 16px;font-family:Georgia,'Times New Roman',serif;font-size:34px;line-height:1.15;font-weight:500;color:${COLORS.ink};">
+                How was it, ${safeName}?
+            </h1>
+            <p style="margin:0 0 16px;font-size:17px;line-height:1.6;color:${COLORS.inkSoft};">
+                We hope your meetup went well. We'd love to know —
+                would you meet this group again?
+            </p>
+            <p style="margin:0 0 24px;font-size:14px;line-height:1.6;color:${COLORS.inkSoft};">
+                There's no wrong answer. We won't share your reply
+                with the others — it just helps us match better next time.
+            </p>
+            <a href="${safeUrl}" style="display:inline-block;background:${COLORS.accent};color:#ffffff;text-decoration:none;padding:14px 28px;border-radius:999px;font-weight:500;font-size:15px;">
+                Share your feedback
+            </a>
+            <p style="margin:24px 0 0;font-size:14px;line-height:1.6;color:${COLORS.inkSoft};font-style:italic;">
+                One tap. Takes five seconds.
+            </p>
+        `,
+    });
+
+    return {
+        subject: `How was your meetup, ${name}?`,
+        html,
+        text: `How was it, ${name}?\n\nWe hope your meetup went well. We'd love to know — would you meet this group again?\n\nShare your feedback: ${ratingUrl}\n\nThere's no wrong answer. It just helps us match better next time.\n\n— Gather`,
+    };
+}

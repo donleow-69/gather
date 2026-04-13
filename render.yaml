@@ -39,6 +39,8 @@ services:
         sync: false # add manually after creating an API key at resend.com
       - key: EMAIL_FROM
         value: Gather <hello@gather.app>
+      - key: DAILY_API_KEY
+        sync: false # add manually after creating an API key at daily.co
 
   - type: web
     name: gather-client

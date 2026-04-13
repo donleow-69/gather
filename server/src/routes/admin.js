@@ -1,12 +1,13 @@
 import { Router } from 'express';
-import { pool } from '../db.js';
+import { pool, query } from '../db.js';
 import { sendEmail } from '../emails/client.js';
 import { cohortReadyEmail } from '../emails/templates.js';
+import { createVideoRoom } from '../video.js';
 
 export const adminRouter = Router();
 
-const COHORT_SIZE = 4;
-const DEFAULT_VIDEO_LINK = 'https://whereby.com/gather-demo';
+const MIN_COHORT = 3;
+const MAX_COHORT = 5;
 
 function requireAdmin(req, res, next) {
     const expected = process.env.ADMIN_SECRET;
@@ -21,9 +22,9 @@ function requireAdmin(req, res, next) {
 }
 
 // POST /api/admin/match
-// Group unmatched users by (city, life_stage), form cohorts of exactly COHORT_SIZE,
-// create cohort + memberships + a single upcoming session for each.
-// Leftovers (< COHORT_SIZE per group) remain unmatched.
+// Group unmatched users by (city, life_stage), form cohorts of 3–5,
+// create cohort + memberships + a unique video room + session for each.
+// Leftovers (< MIN_COHORT per group) remain unmatched.
 adminRouter.post('/admin/match', requireAdmin, async (req, res) => {
     const client = await pool.connect();
     try {
@@ -57,9 +58,23 @@ adminRouter.post('/admin/match', requireAdmin, async (req, res) => {
         for (const [key, users] of groups) {
             const [city, lifeStage] = key.split('||');
 
-            // Take chunks of COHORT_SIZE; leftovers remain unmatched
-            for (let i = 0; i + COHORT_SIZE <= users.length; i += COHORT_SIZE) {
-                const chunk = users.slice(i, i + COHORT_SIZE);
+            // Greedily form cohorts of up to MAX_COHORT. If the remainder
+            // would be < MIN_COHORT, shrink the last cohort to accommodate.
+            let i = 0;
+            while (i < users.length) {
+                const remaining = users.length - i;
+                if (remaining < MIN_COHORT) break; // too few — leave unmatched
+
+                let chunkSize = Math.min(MAX_COHORT, remaining);
+                // If taking MAX_COHORT would leave a remainder < MIN_COHORT (and > 0),
+                // split more evenly so both halves are >= MIN_COHORT
+                const afterChunk = remaining - chunkSize;
+                if (afterChunk > 0 && afterChunk < MIN_COHORT) {
+                    chunkSize = Math.ceil(remaining / 2);
+                }
+
+                const chunk = users.slice(i, i + chunkSize);
+                i += chunkSize;
 
                 const cohortName = `${city} · ${lifeStage} #${Date.now().toString(36)}-${cohortIndex}`;
                 const { rows: cohortRows } = await client.query(
@@ -77,10 +92,14 @@ adminRouter.post('/admin/match', requireAdmin, async (req, res) => {
 
                 const sessionDate = new Date(baseDate);
                 sessionDate.setUTCDate(sessionDate.getUTCDate() + cohortIndex);
+
+                // Generate a unique video room (Daily.co if key set, else placeholder)
+                const videoLink = await createVideoRoom(cohortName);
+
                 const { rows: sessionRows } = await client.query(
                     `INSERT INTO sessions (cohort_id, scheduled_at, video_link)
                      VALUES ($1, $2, $3) RETURNING id, scheduled_at`,
-                    [cohortId, sessionDate.toISOString(), DEFAULT_VIDEO_LINK]
+                    [cohortId, sessionDate.toISOString(), videoLink]
                 );
 
                 cohortsCreated.push({
@@ -92,7 +111,7 @@ adminRouter.post('/admin/match', requireAdmin, async (req, res) => {
                     members: chunk.map(u => ({ id: u.id, name: u.name, email: u.email })),
                     session_id: sessionRows[0].id,
                     scheduled_at: sessionRows[0].scheduled_at,
-                    video_link: DEFAULT_VIDEO_LINK,
+                    video_link: videoLink,
                 });
 
                 cohortIndex++;
@@ -105,8 +124,7 @@ adminRouter.post('/admin/match', requireAdmin, async (req, res) => {
 
         await client.query('COMMIT');
 
-        // Fire-and-forget cohort-ready emails. Failures are logged inside
-        // sendEmail and must not affect the API response.
+        // Fire-and-forget cohort-ready emails
         for (const cohort of cohortsCreated) {
             const memberFirstNames = cohort.members.map(m => m.name);
             for (const member of cohort.members) {
@@ -135,6 +153,7 @@ adminRouter.post('/admin/match', requireAdmin, async (req, res) => {
                 member_names: c.members.map(m => m.name),
                 session_id: c.session_id,
                 scheduled_at: c.scheduled_at,
+                video_link: c.video_link,
             })),
             unmatched: stillUnmatched.map(u => ({
                 id: u.id,
@@ -150,4 +169,69 @@ adminRouter.post('/admin/match', requireAdmin, async (req, res) => {
     } finally {
         client.release();
     }
+});
+
+// GET /api/admin/signups — all users with their match status
+adminRouter.get('/admin/signups', requireAdmin, async (_req, res) => {
+    const { rows } = await query(
+        `SELECT u.id, u.name, u.email, u.city, u.life_stage, u.created_at,
+                EXISTS(SELECT 1 FROM cohort_members cm WHERE cm.user_id = u.id) AS matched
+           FROM users u
+          ORDER BY u.created_at DESC`
+    );
+    res.json({ signups: rows });
+});
+
+// GET /api/admin/cohorts — all cohorts with members and session info
+adminRouter.get('/admin/cohorts', requireAdmin, async (_req, res) => {
+    const { rows: cohorts } = await query(
+        `SELECT c.id, c.name, c.city, c.created_at,
+                s.id AS session_id, s.scheduled_at, s.video_link
+           FROM cohorts c
+           LEFT JOIN sessions s ON s.cohort_id = c.id
+          ORDER BY c.created_at DESC`
+    );
+
+    // Fetch members for each cohort in one query
+    const cohortIds = cohorts.map(c => c.id);
+    let membersByCofort = {};
+    if (cohortIds.length > 0) {
+        const { rows: members } = await query(
+            `SELECT cm.cohort_id, u.id, u.name, u.email, u.life_stage,
+                    r.response AS rating
+               FROM cohort_members cm
+               JOIN users u ON u.id = cm.user_id
+               LEFT JOIN ratings r ON r.user_id = u.id AND r.session_id = (
+                   SELECT s.id FROM sessions s WHERE s.cohort_id = cm.cohort_id LIMIT 1
+               )
+              WHERE cm.cohort_id = ANY($1)
+              ORDER BY u.name`,
+            [cohortIds]
+        );
+        for (const m of members) {
+            if (!membersByCofort[m.cohort_id]) membersByCofort[m.cohort_id] = [];
+            membersByCofort[m.cohort_id].push({
+                id: m.id,
+                name: m.name,
+                email: m.email,
+                life_stage: m.life_stage,
+                rating: m.rating,
+            });
+        }
+    }
+
+    res.json({
+        cohorts: cohorts.map(c => ({
+            id: c.id,
+            name: c.name,
+            city: c.city,
+            created_at: c.created_at,
+            session: c.session_id ? {
+                id: c.session_id,
+                scheduled_at: c.scheduled_at,
+                video_link: c.video_link,
+            } : null,
+            members: membersByCofort[c.id] || [],
+        })),
+    });
 });

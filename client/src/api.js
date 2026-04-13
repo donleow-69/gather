@@ -25,6 +25,22 @@ async function request(path, { method = 'GET', body, auth = false } = {}) {
     return data;
 }
 
+// Admin requests use X-Admin-Secret header instead of Bearer token
+function adminRequest(path, { method = 'GET', body } = {}) {
+    const secret = sessionStorage.getItem('gather_admin_secret');
+    const headers = { 'Content-Type': 'application/json' };
+    if (secret) headers['X-Admin-Secret'] = secret;
+    return fetch(`${API_URL}${path}`, {
+        method,
+        headers,
+        body: body ? JSON.stringify(body) : undefined,
+    }).then(async (res) => {
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || `Request failed (${res.status})`);
+        return data;
+    });
+}
+
 export const api = {
     signup: (payload) => request('/api/signup', { method: 'POST', body: payload }),
     login: (email) => request('/api/login', { method: 'POST', body: { email } }),
@@ -32,4 +48,8 @@ export const api = {
     myCohort: () => request('/api/me/cohort', { auth: true }),
     rate: (session_id, response) =>
         request('/api/ratings', { method: 'POST', body: { session_id, response }, auth: true }),
+    // Admin
+    adminSignups: () => adminRequest('/api/admin/signups'),
+    adminCohorts: () => adminRequest('/api/admin/cohorts'),
+    adminMatch: () => adminRequest('/api/admin/match', { method: 'POST' }),
 };
