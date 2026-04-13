@@ -42,6 +42,30 @@ services:
       - key: DAILY_API_KEY
         sync: false # add manually after creating an API key at daily.co
 
+  - type: cron
+    name: gather-cron
+    runtime: node
+    rootDir: server
+    buildCommand: npm install
+    schedule: "0 8 * * 1,3,5"  # Mon/Wed/Fri at 8:00 AM UTC
+    startCommand: npm run cron
+    envVars:
+      - key: ADMIN_SECRET
+        fromService:
+          name: gather-api
+          type: web
+          envVarKey: ADMIN_SECRET
+      - key: INTERNAL_API_URL
+        sync: false  # set to the gather-api internal URL
+      - key: DATABASE_URL
+        fromDatabase:
+          name: gather-db
+          property: connectionString
+      - key: RESEND_API_KEY
+        sync: false
+      - key: EMAIL_FROM
+        value: Gather <hello@gather.app>
+
   - type: web
     name: gather-client
     runtime: static

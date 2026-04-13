@@ -7,7 +7,8 @@
     "start": "node src/index.js",
     "dev": "node --watch src/index.js",
     "seed": "node seed.js",
-    "migrate": "psql \"$DATABASE_URL\" -f schema.sql"
+    "migrate": "psql \"$DATABASE_URL\" -f schema.sql",
+    "cron": "node src/cron.js"
   },
   "dependencies": {
     "cors": "^2.8.5",

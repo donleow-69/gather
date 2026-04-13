@@ -65,7 +65,7 @@ async function seed() {
             await client.query(
                 `INSERT INTO sessions (cohort_id, scheduled_at, video_link)
                  VALUES ($1, $2, $3)`,
-                [cohortId, sessionDate.toISOString(), 'https://whereby.com/gather-demo']
+                [cohortId, sessionDate.toISOString(), 'https://whereby.com/gather-circle']
             );
         }
 

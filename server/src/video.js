@@ -2,7 +2,7 @@
 // if DAILY_API_KEY is not set (e.g. local dev).
 
 const apiKey = process.env.DAILY_API_KEY;
-const FALLBACK_URL = 'https://whereby.com/gather-demo';
+const FALLBACK_URL = 'https://whereby.com/gather-circle';
 
 export async function createVideoRoom(cohortName) {
     if (!apiKey) {
