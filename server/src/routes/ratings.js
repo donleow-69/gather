@@ -23,7 +23,14 @@ ratingsRouter.post('/ratings', requireUser, async (req, res) => {
              RETURNING id, session_id, response, created_at`,
             [req.user.id, session_id, response]
         );
-        res.status(201).json({ rating: rows[0] });
+
+        // "Yes" opts the user in for re-matching; anything else opts out
+        await query(
+            'UPDATE users SET rematch = $1 WHERE id = $2',
+            [response === 'yes', req.user.id]
+        );
+
+        res.status(201).json({ rating: rows[0], rematch: response === 'yes' });
     } catch (err) {
         console.error('rating failed', err);
         res.status(500).json({ error: 'Could not save rating' });

@@ -13,6 +13,7 @@ CREATE TABLE users (
     city            TEXT NOT NULL,
     life_stage      TEXT NOT NULL,
     session_token   TEXT UNIQUE NOT NULL,
+    rematch         BOOLEAN NOT NULL DEFAULT FALSE,
     created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 

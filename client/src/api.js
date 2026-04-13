@@ -52,4 +52,5 @@ export const api = {
     adminSignups: () => adminRequest('/api/admin/signups'),
     adminCohorts: () => adminRequest('/api/admin/cohorts'),
     adminMatch: () => adminRequest('/api/admin/match', { method: 'POST' }),
+    adminSendRatingEmails: () => adminRequest('/api/admin/send-rating-emails', { method: 'POST' }),
 };

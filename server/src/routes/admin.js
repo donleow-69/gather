@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { pool, query } from '../db.js';
 import { sendEmail } from '../emails/client.js';
-import { cohortReadyEmail } from '../emails/templates.js';
+import { cohortReadyEmail, ratingEmail } from '../emails/templates.js';
 import { createVideoRoom } from '../video.js';
 
 export const adminRouter = Router();
@@ -30,14 +30,29 @@ adminRouter.post('/admin/match', requireAdmin, async (req, res) => {
     try {
         await client.query('BEGIN');
 
+        // Find users eligible for matching: either never matched, or opted in for re-match
         const { rows: unmatched } = await client.query(
-            `SELECT u.id, u.name, u.email, u.city, u.life_stage
+            `SELECT u.id, u.name, u.email, u.city, u.life_stage, u.rematch
                FROM users u
               WHERE NOT EXISTS (
                   SELECT 1 FROM cohort_members cm WHERE cm.user_id = u.id
               )
+              OR u.rematch = TRUE
               ORDER BY u.city, u.life_stage, u.created_at`
         );
+
+        // Remove re-match users from their current cohorts so they can join new ones
+        const rematchUserIds = unmatched.filter(u => u.rematch).map(u => u.id);
+        if (rematchUserIds.length > 0) {
+            await client.query(
+                'DELETE FROM cohort_members WHERE user_id = ANY($1)',
+                [rematchUserIds]
+            );
+            await client.query(
+                'UPDATE users SET rematch = FALSE WHERE id = ANY($1)',
+                [rematchUserIds]
+            );
+        }
 
         // Bucket users by "city||life_stage"
         const groups = new Map();
@@ -174,7 +189,7 @@ adminRouter.post('/admin/match', requireAdmin, async (req, res) => {
 // GET /api/admin/signups — all users with their match status
 adminRouter.get('/admin/signups', requireAdmin, async (_req, res) => {
     const { rows } = await query(
-        `SELECT u.id, u.name, u.email, u.city, u.life_stage, u.created_at,
+        `SELECT u.id, u.name, u.email, u.city, u.life_stage, u.rematch, u.created_at,
                 EXISTS(SELECT 1 FROM cohort_members cm WHERE cm.user_id = u.id) AS matched
            FROM users u
           ORDER BY u.created_at DESC`
@@ -234,4 +249,37 @@ adminRouter.get('/admin/cohorts', requireAdmin, async (_req, res) => {
             members: membersByCofort[c.id] || [],
         })),
     });
+});
+
+// POST /api/admin/send-rating-emails
+// Send rating emails to cohort members whose session has passed and who haven't rated yet.
+adminRouter.post('/admin/send-rating-emails', requireAdmin, async (req, res) => {
+    const clientOrigin = process.env.CLIENT_ORIGIN || 'http://localhost:5173';
+
+    // Find members of past sessions who haven't submitted a rating
+    const { rows } = await query(
+        `SELECT u.id, u.name, u.email, s.id AS session_id
+           FROM sessions s
+           JOIN cohort_members cm ON cm.cohort_id = s.cohort_id
+           JOIN users u ON u.id = cm.user_id
+          WHERE s.scheduled_at < NOW()
+            AND NOT EXISTS (
+                SELECT 1 FROM ratings r
+                 WHERE r.user_id = u.id AND r.session_id = s.id
+            )
+          ORDER BY s.scheduled_at DESC`
+    );
+
+    let sent = 0;
+    for (const row of rows) {
+        const ratingUrl = `${clientOrigin}/rate`;
+        const { subject, html, text } = ratingEmail({
+            name: row.name,
+            ratingUrl,
+        });
+        sendEmail({ to: row.email, subject, html, text }).catch(() => {});
+        sent++;
+    }
+
+    res.json({ sent, recipients: rows.map(r => ({ id: r.id, name: r.name, email: r.email })) });
 });

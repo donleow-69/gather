@@ -12,6 +12,7 @@ export default function Rating() {
     const location = useLocation();
     const [sessionId, setSessionId] = useState(location.state?.sessionId || null);
     const [submitted, setSubmitted] = useState(false);
+    const [choice, setChoice] = useState(null);
     const [error, setError] = useState('');
     const [busy, setBusy] = useState(false);
 
@@ -28,6 +29,7 @@ export default function Rating() {
         setError('');
         try {
             await api.rate(sessionId, value);
+            setChoice(value);
             setSubmitted(true);
         } catch (err) {
             setError(err.message);
@@ -47,6 +49,11 @@ export default function Rating() {
                         Your honesty is what makes the next circle better.
                         We're glad you came.
                     </p>
+                    {choice === 'yes' && (
+                        <p className="mt-4 text-sm text-gather-accent">
+                            We'll match you into a new circle soon.
+                        </p>
+                    )}
                     <Link to="/cohort" className="btn-secondary mt-8">
                         Back to my circle
                     </Link>

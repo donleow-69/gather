@@ -2,6 +2,18 @@ import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api, setToken } from '../api.js';
 
+// Singapore first (launch market), then alphabetical
+const CITIES = [
+    'Singapore',
+    'Hong Kong',
+    'Jakarta',
+    'Kuala Lumpur',
+    'Manila',
+    'Seoul',
+    'Taipei',
+    'Tokyo',
+];
+
 const LIFE_STAGES = [
     'New to city',
     'Recently retired',
@@ -90,13 +102,17 @@ export default function Onboarding() {
                 </div>
                 <div>
                     <label className="label">City</label>
-                    <input
+                    <select
                         className="input"
                         required
                         value={form.city}
                         onChange={update('city')}
-                        placeholder="Where are you these days?"
-                    />
+                    >
+                        <option value="">Where are you these days?</option>
+                        {CITIES.map((c) => (
+                            <option key={c} value={c}>{c}</option>
+                        ))}
+                    </select>
                 </div>
                 <div>
                     <label className="label">Life stage</label>

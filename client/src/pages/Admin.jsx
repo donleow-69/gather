@@ -20,6 +20,7 @@ export default function Admin() {
     const [signups, setSignups] = useState([]);
     const [cohorts, setCohorts] = useState([]);
     const [matchResult, setMatchResult] = useState(null);
+    const [ratingResult, setRatingResult] = useState(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
 
@@ -49,11 +50,24 @@ export default function Admin() {
 
     async function runMatch() {
         setMatchResult(null);
+        setRatingResult(null);
         setError('');
         try {
             const result = await api.adminMatch();
             setMatchResult(result);
-            await load(); // refresh data
+            await load();
+        } catch (err) {
+            setError(err.message);
+        }
+    }
+
+    async function sendRatingEmails() {
+        setRatingResult(null);
+        setMatchResult(null);
+        setError('');
+        try {
+            const result = await api.adminSendRatingEmails();
+            setRatingResult(result);
         } catch (err) {
             setError(err.message);
         }
@@ -108,6 +122,9 @@ export default function Admin() {
                 <button onClick={runMatch} disabled={loading || unmatchedCount < 3} className="btn-primary text-sm disabled:opacity-50">
                     Run matching
                 </button>
+                <button onClick={sendRatingEmails} disabled={loading} className="btn-secondary text-sm disabled:opacity-50">
+                    Send rating emails
+                </button>
                 <button onClick={load} disabled={loading} className="btn-secondary text-sm disabled:opacity-50">
                     Refresh
                 </button>
@@ -118,6 +135,13 @@ export default function Admin() {
                     Created <strong>{matchResult.cohorts_created}</strong> cohort(s),
                     matched <strong>{matchResult.users_matched}</strong> user(s),{' '}
                     <strong>{matchResult.users_still_unmatched}</strong> still unmatched.
+                </div>
+            )}
+
+            {ratingResult && (
+                <div className="mt-4 rounded-xl bg-blue-50 border border-blue-200 px-5 py-4 text-sm">
+                    Sent <strong>{ratingResult.sent}</strong> rating email(s)
+                    {ratingResult.sent === 0 && ' — everyone has already rated or no sessions have passed yet'}.
                 </div>
             )}
 
@@ -163,7 +187,9 @@ export default function Admin() {
                                     <td className="py-3 pr-4">{s.life_stage}</td>
                                     <td className="py-3 pr-4 text-gather-ink-soft">{formatDate(s.created_at)}</td>
                                     <td className="py-3">
-                                        {s.matched ? (
+                                        {s.rematch ? (
+                                            <span className="rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-700">Re-match</span>
+                                        ) : s.matched ? (
                                             <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">Matched</span>
                                         ) : (
                                             <span className="rounded-full bg-gather-blush px-2 py-0.5 text-xs font-medium text-gather-accent-deep">Waiting</span>
